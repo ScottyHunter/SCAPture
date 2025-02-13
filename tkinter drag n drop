@@ -1,0 +1,52 @@
+import tkinter as tk
+from tkinterdnd2 import DND_FILES, TkinterDnD
+from tkinter import messagebox
+from lxml import etree
+
+# Define SCAP namespaces
+NAMESPACES = {
+    "xccdf": "http://checklists.nist.gov/xccdf/1.2",
+    "oval": "http://oval.mitre.org/XMLSchema/oval-definitions-5",
+    "cpe": "http://scap.nist.gov/schema/cpe-dictionary/2.0"
+}
+
+def detect_scap_file(file_path):
+    """Detects the SCAP file type based on XML namespace."""
+    try:
+        tree = etree.parse(file_path)
+        root = tree.getroot()
+        ns = root.tag.split("}")[0].strip("{")  # Extract namespace
+
+        if ns == NAMESPACES["xccdf"]:
+            return "XCCDF"
+        elif ns == NAMESPACES["oval"]:
+            return "OVAL"
+        elif ns == NAMESPACES["cpe"]:
+            return "CPE"
+        else:
+            return None
+    except Exception:
+        return None
+
+def on_drop(event):
+    file_path = event.data.strip("{}")  # Handle path format
+    file_type = detect_scap_file(file_path)
+
+    if file_type:
+        messagebox.showinfo("File Detected", f"Detected SCAP File Type: {file_type}")
+    else:
+        messagebox.showerror("Error", "Invalid or unsupported SCAP file.")
+
+# Create Tkinter window
+root = TkinterDnD.Tk()
+root.title("SCAPture - SCAP Compliance Checker")
+root.geometry("400x200")
+
+# Create drag-and-drop area
+label = tk.Label(root, text="Drag and drop SCAP files here", padx=20, pady=50, relief="solid")
+label.pack(pady=20)
+label.drop_target_register(DND_FILES)
+label.dnd_bind('<<Drop>>', on_drop)
+
+# Run GUI
+root.mainloop()
