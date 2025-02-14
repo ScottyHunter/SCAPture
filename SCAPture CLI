@@ -1,0 +1,83 @@
+import os
+import sys
+import json
+import csv
+import xml.etree.ElementTree as ET
+
+class SCAPtureCLI:
+    def __init__(self, files):
+        self.files = files
+        self.results = []
+
+    def detect_file_type(self, file_path):
+        """Detect if file is XCCDF, OVAL, or CPE."""
+        try:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+            
+            if 'Benchmark' in root.tag:
+                return 'XCCDF'
+            elif 'oval_definitions' in root.tag:
+                return 'OVAL'
+            elif 'cpe-list' in root.tag:
+                return 'CPE'
+            else:
+                return 'UNKNOWN'
+        except Exception:
+            return 'INVALID'
+
+    def process_file(self, file_path):
+        """Parse and check compliance for a given SCAP file."""
+        file_type = self.detect_file_type(file_path)
+        
+        if file_type == 'UNKNOWN' or file_type == 'INVALID':
+            return {"file": file_path, "status": "Error", "message": "Unsupported or invalid SCAP file."}
+        
+        # Placeholder for actual parsing logic
+        return {"file": file_path, "type": file_type, "status": "Processed"}
+    
+    def run(self):
+        """Run SCAPture on all provided files."""
+        for file in self.files:
+            result = self.process_file(file)
+            self.results.append(result)
+        self.generate_reports()
+        self.print_summary()
+    
+    def generate_reports(self):
+        """Generate reports in text, JSON, and CSV formats."""
+        base_path = os.path.dirname(self.files[0]) if self.files else os.getcwd()
+        
+        # Text report
+        txt_file = os.path.join(base_path, "scapture_summary.txt")
+        with open(txt_file, "w") as txt:
+            for result in self.results:
+                txt.write(f"{result}\n")
+        
+        # JSON report
+        json_file = os.path.join(base_path, "scapture_summary.json")
+        with open(json_file, "w") as json_out:
+            json.dump(self.results, json_out, indent=4)
+        
+        # CSV report
+        csv_file = os.path.join(base_path, "scapture_summary.csv")
+        with open(csv_file, "w", newline='') as csv_out:
+            writer = csv.DictWriter(csv_out, fieldnames=["file", "type", "status", "message"])
+            writer.writeheader()
+            for result in self.results:
+                writer.writerow(result)
+    
+    def print_summary(self):
+        """Print final summary to console."""
+        print("SCAPture Summary:")
+        for result in self.results:
+            print(result)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python scapture_cli.py <SCAP file(s)>")
+        sys.exit(1)
+    
+    files = sys.argv[1:]
+    scap_cli = SCAPtureCLI(files)
+    scap_cli.run()
